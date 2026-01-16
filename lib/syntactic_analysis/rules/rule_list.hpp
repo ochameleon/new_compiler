@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 #include "rule.hpp"
@@ -12,6 +14,8 @@ private:
 public:
     RuleList(const vector<Rule>& rules) : rules_(rules){
     }
+
+    const vector<Rule>& rules() const { return rules_; }
 };
 
 }

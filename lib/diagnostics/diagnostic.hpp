@@ -4,7 +4,7 @@
 #include <string>
 
 #include "severity.hpp"
-#include "../text/text_location.hpp"
+#include "../syntactic_analysis/text/text_location.hpp"
 
 using namespace std;
 

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "../text/text_source.hpp"
-#include "../diagnostics/diagnostic_list.hpp"
+#include "../../diagnostics/diagnostic_list.hpp"
 #include "../nodes/syntax_token.hpp"
 #include "../token_kind.hpp"
 

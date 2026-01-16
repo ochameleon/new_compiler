@@ -1,12 +1,13 @@
 #include <string>
 #include <vector>
 
-#include "../lib/code_analysis/rules/rule_list.hpp"
+#include "../lib/syntactic_analysis/rules/rule_list.hpp"
 
-#include "../lib/code_analysis/steps/reader.hpp"
-#include "../lib/code_analysis/steps/lexer.hpp"
+#include "../lib/syntactic_analysis/steps/reader.hpp"
+#include "../lib/syntactic_analysis/steps/lexer.hpp"
+#include "../lib/syntactic_analysis/steps/parser.hpp"
 
-#include "../lib/code_analysis/text/text_source.hpp"
+#include "../lib/syntactic_analysis/text/text_source.hpp"
 
 using namespace std;
 using namespace my;
@@ -18,24 +19,54 @@ int main() {
     */
     string file_name = "input.meleon";
 
-    RuleList grammar(
-        {}
-    );
+    vector<Rule> rules = {
+        Rule("Start",
+            {
+                Symbol("End"),
+            },
+        0),
+        Rule("Start",
+            {
+                Symbol("Grammar"),
+                Symbol("End"),
+            },
+        0),
+
+        Rule("Grammar",
+            {
+                Symbol(TokenKind::Identifier)
+            },
+        0),
+        Rule("Grammar",
+            {
+                Symbol(TokenKind::LeftRoundBracket),
+                Symbol("Grammar"),
+                Symbol(TokenKind::RightRoundBracket)
+            },
+        0),
+        
+        Rule("End",
+            {
+                Symbol(TokenKind::NewLine),
+                Symbol(TokenKind::EndOfFile)
+            },
+        0),
+        Rule("End",
+            {
+                Symbol(TokenKind::EndOfFile)
+            },
+        1)
+    };
+
+    RuleList grammar(rules);
 
     vector<string> text = read(file_name);
     TextSource source(text, file_name);
     Lexer lexer(source);
+    Parser parser(lexer, grammar);
+    
+    bool success = parser.parse();
+    
+    return 0;
 
-    while (true) {
-        SyntaxToken l = lexer.lex();
-        TokenKind k = l.kind();
-        if (kind_to_string(k).has_value()) {
-            cout << kind_to_string(k).value();
-            if (k == TokenKind::EndOfFile) break;
-        }
-        else {
-            cout << l.text();
-        }
-        cout << endl;
-    }
 }
