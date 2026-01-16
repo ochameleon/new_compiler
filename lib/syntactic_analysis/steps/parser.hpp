@@ -55,11 +55,14 @@ private:
         const vector<Symbol>& rhs = item.rule().rhs();
         for (int i = 0; i < (int)rhs.size(); i++) {
             if (i == dot) cout << "• ";
-            if (rhs[i].is_terminal()) {
-                cout << "TERM ";
+            const Symbol& sym = rhs[i];
+            cout << "{T=" << sym.is_terminal() << ":";
+            if (sym.is_terminal()) {
+                cout << "TERM";
             } else {
-                cout << rhs[i].nonterminal() << " ";
+                cout << sym.nonterminal();
             }
+            cout << "} ";
         }
         if (dot == (int)rhs.size()) cout << "•";
         cout << ", origin=" << item.origin() << "]";
@@ -196,12 +199,13 @@ public:
 
     bool parse() {
         tokenize_all_();
-        initialize_chart_();
-        seed_chart_();
         
         cout << "=== Starting Earley Parse ===" << endl;
         cout << "Total tokens: " << tokens_.size() << endl;
         cout << "Total rules: " << rules_.rules().size() << endl << endl;
+
+        initialize_chart_();
+        seed_chart_();
 
         for (int k = 0; k <= (int)tokens_.size(); k++) {
             cout << "POSITION " << k << endl;
