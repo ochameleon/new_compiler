@@ -3,8 +3,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "../text/text_span.hpp"
-#include "../token_kind.hpp"
+#include "text/text_span.hpp"
+#include "token_kind.hpp"
 
 using namespace std;
 
@@ -37,9 +37,19 @@ public:
         return TextSpan(first->span().begin(), last->span().end() - last->span().begin());
     }
 
-    virtual bool is_SyntaxToken() const {
+    virtual bool is_Token() const {
         return false;
     }
+};
+
+class NonTerminalNode : public SyntaxNode {
+private:
+    std::string name_;
+public:
+    NonTerminalNode(const std::string& name, const std::vector<std::shared_ptr<SyntaxNode>>& children)
+        : SyntaxNode(TokenKind::CompilationUnit, children), name_(name) {}
+
+    const std::string& name() const { return name_; }
 };
 
 }

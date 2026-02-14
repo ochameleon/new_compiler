@@ -14,8 +14,9 @@ private:
     string lhs_;
     vector<Symbol> rhs_;
     int precedence_;
+    bool associativity_;
 public:
-    Rule(const string& lhs, const vector<Symbol>& rhs, const int& precedence) : lhs_(lhs), rhs_(rhs), precedence_(precedence) {
+    Rule(string lhs, vector<Symbol> rhs, int precedence, bool associativity) : lhs_(lhs), rhs_(rhs), precedence_(precedence), associativity_(associativity){
     }
 
     // Explicit copy constructor
@@ -27,15 +28,17 @@ public:
             lhs_ = other.lhs();
             rhs_ = other.rhs();
             precedence_ = other.precedence();
+            associativity_ = other.associativity();
         }
         return *this;
     }
 
-    const string& lhs() const { return lhs_; }
-    const vector<Symbol>& rhs() const { return rhs_; }
+    string lhs() const { return lhs_; }
+    vector<Symbol> rhs() const { return rhs_; }
     int precedence() const { return precedence_; }
+    bool associativity() const { return associativity_; }
 
-    bool operator==(const Rule& r) const {
+    bool operator==(Rule r) const {
         return lhs_ == r.lhs() && rhs_ == r.rhs() && precedence_ == r.precedence();
     }
 };

@@ -6,8 +6,6 @@
 #include <optional>
 #include <algorithm>
 
-using namespace std;
-
 namespace my {
 
 enum class TokenKind {
@@ -18,29 +16,32 @@ enum class TokenKind {
     Bar,
     Colon,
 
+    BarArrow,
+    ColonArrow,
+
     LeftRoundBracket,
     RightRoundBracket,
 
     Comma,
     SemiColon,
 
-    SingleQuote,
+    Quote,
     DoubleQuote,
 
     LeftProofBracket,
     RightProofBracket,
 
-    LeftSmallProofBracket,
-    RightSmallProofBracket,
-
     Identifier,
     BadLexeme,
-    CompilationUnit
+    CompilationUnit,
 };
 
-const vector<pair<string, TokenKind>> special_character_to_kind = {
+const std::vector<std::pair<std::string, TokenKind>> special_character_to_kind = {
     {"|", TokenKind::Bar},
     {":", TokenKind::Colon},
+
+    {"↦", TokenKind::BarArrow},
+    {"⧴", TokenKind::ColonArrow},
 
     {"(", TokenKind::LeftRoundBracket},
     {")", TokenKind::RightRoundBracket},
@@ -48,17 +49,14 @@ const vector<pair<string, TokenKind>> special_character_to_kind = {
     {",", TokenKind::Comma},
     {";", TokenKind::SemiColon},
 
-    {"'", TokenKind::SingleQuote},
+    {"'", TokenKind::Quote},
     {"\"", TokenKind::DoubleQuote},
 
     {"□", TokenKind::LeftProofBracket},
     {"■", TokenKind::RightProofBracket},
-
-    {"▫", TokenKind::LeftSmallProofBracket},
-    {"▪", TokenKind::RightSmallProofBracket}
 };
 
-const vector<string> invisible_characters = {
+const std::vector<std::string> invisible_characters = {
     u8"\u000B", u8"\u000C", u8"\u00A0", u8"\u1680", u8"\u180E",
     u8"\u2000", u8"\u2001", u8"\u2002", u8"\u2003", u8"\u2004",
     u8"\u2005", u8"\u2006", u8"\u2007", u8"\u2008", u8"\u2009",
@@ -68,7 +66,7 @@ const vector<string> invisible_characters = {
     u8"\uFEFF"
 };
 
-bool is_special(const string& c) {
+bool is_special(const std::string& c) {
     return any_of(
         special_character_to_kind.begin(),
         special_character_to_kind.end(),
@@ -76,31 +74,31 @@ bool is_special(const string& c) {
     );
 }
 
-bool is_invisible(const string& c) {
+bool is_invisible(const std::string& c) {
     return find(invisible_characters.begin(), invisible_characters.end(), c) != invisible_characters.end();
 }
 
-bool is_spacing(const string& c) {
+bool is_spacing(const std::string& c) {
     return c == " " || c == "\t";
 }
 
-bool is_newline(const string& c) {
+bool is_newline(const std::string& c) {
     return c == "\n";
 }
 
-bool is_allowed(const string& c) {
+bool is_allowed(const std::string& c) {
     return !(is_spacing(c) || is_newline(c) || is_special(c) || is_invisible(c));
 }
 
 template <typename K, typename V>
-vector<pair<V, K>> invert(const vector<pair<K, V>>& input) {
-    vector<pair<V, K>> result;
+std::vector<std::pair<V, K>> invert(const std::vector<std::pair<K, V>>& input) {
+    std::vector<std::pair<V, K>> result;
     for (const auto& [k, v] : input)
         result.emplace_back(v, k);
     return result;
 }
 
-const vector<pair<TokenKind, string>> kind_to_special_characters =
+const std::vector<std::pair<TokenKind, std::string>> kind_to_special_characters =
     invert(special_character_to_kind);
 
 bool is_special_kind(TokenKind kind) {
@@ -111,7 +109,7 @@ bool is_special_kind(TokenKind kind) {
     );
 }
 
-optional<string> kind_to_string(TokenKind kind) {
+std::optional<std::string> kind_to_string(TokenKind kind) {
     switch (kind) {
         case TokenKind::WhiteSpace: return " ";
         case TokenKind::NewLine: return "\n";
@@ -126,7 +124,7 @@ optional<string> kind_to_string(TokenKind kind) {
                 if (it != kind_to_special_characters.end())
                     return it->second;
             }
-            return nullopt;
+            return std::nullopt;
     }
 }
 

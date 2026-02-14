@@ -5,7 +5,7 @@
 
 #include "../text/text_source.hpp"
 #include "../../diagnostics/diagnostic_list.hpp"
-#include "../nodes/syntax_token.hpp"
+#include "../token.hpp"
 #include "../token_kind.hpp"
 
 using namespace std;
@@ -49,7 +49,7 @@ public:
         return consume(is_allowed);
     }
 
-    SyntaxToken lex() {
+    Token lex() {
         int begin = position_;
         TokenKind kind;
         string text;
@@ -65,6 +65,7 @@ public:
             kind = TokenKind::NewLine;
         }
         else if (c == "\r") {
+            position_++;
             kind = TokenKind::NewLine;
         }
         else if (c == "") {
@@ -92,7 +93,7 @@ public:
             text = source_.to_string(TextSpan(begin, position_ - begin));
         }
 
-        return SyntaxToken(kind, position_, text);
+        return Token(kind, position_, text);
     }
 };
 
