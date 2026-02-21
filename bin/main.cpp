@@ -5,6 +5,7 @@
 #include "../lib/syntactic_analysis/steps/reader.hpp"
 #include "../lib/syntactic_analysis/steps/lexer.hpp"
 #include "../lib/syntactic_analysis/steps/parser.hpp"
+#include "../lib/syntactic_analysis/steps/interpreter.hpp"
 #include "../lib/syntactic_analysis/text/text_source.hpp"
 
 using namespace my;
@@ -43,10 +44,16 @@ int main() {
         std::cout << "AST:" << std::endl;
         std::cout << parser_ast_to_string(root) << std::endl;
         std::cout << "Expression: " << parser_to_string(root) << std::endl;
+
+        Interpreter interpreter(root);
+        Node evaluated = interpreter.evaluate();
+        std::cout << "Evaluated AST:" << std::endl;
+        std::cout << parser_ast_to_string(evaluated) << std::endl;
+        std::cout << "Evaluated Expression: " << parser_to_string(evaluated) << std::endl;
         return 0;
     }
     catch (const std::exception& ex) {
-        std::cerr << "Parse error: " << ex.what() << std::endl;
+        std::cerr << "Parse or Intepretation error: " << ex.what() << std::endl;
         return 1;
     }
 }
