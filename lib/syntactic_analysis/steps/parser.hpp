@@ -1,287 +1,334 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <iostream>
-#include <memory>
-#include <unordered_map>
-#include <algorithm>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-#include "../../diagnostics/diagnostic_list.hpp"
-#include "../steps/lexer.hpp"
-#include "../rules/rule.hpp"
-
-using namespace std;
+#include "lexer.hpp"
 
 namespace my {
 
-class Earley {
-private:
-    Rule rule_;
-    int dot_;
-    int origin_;
+struct Node {
+    enum class Kind {
+        Empty,
+        Identifier,
+        StringLiteral,
+        Quote,
+        Tuple,
+        Call
+    };
 
-public:
-    Earley(Rule rule, int dot, int origin) : rule_(rule), dot_(dot), origin_(origin) {
+    Kind kind;
+    std::string name;
+    std::vector<Node> arguments;
+
+    static Node empty() {
+        return Node{Kind::Empty, "", {}};
     }
 
-    Rule rule() const { return rule_; }
-    int dot() const { return dot_; }
-    int origin() const { return origin_; }
-
-    Earley& operator=(const Earley& other) {
-        if (this != &other) {
-            rule_ = other.rule();
-            dot_ = other.dot();
-            origin_ = other.origin();
-        }
-        return *this;
+    static Node identifier(const std::string& identifier_name) {
+        return Node{Kind::Identifier, identifier_name, {}};
     }
 
-    bool operator==(Earley o) const {
-        return rule_ == o.rule() && dot_ == o.dot() && origin_ == o.origin();
+    static Node string_literal(const std::string& value) {
+        return Node{Kind::StringLiteral, value, {}};
+    }
+
+    static Node quote(const Node& quoted_expression) {
+        return Node{Kind::Quote, "", {quoted_expression}};
+    }
+
+    static Node call(const Node& callable_expression, const std::vector<Node>& call_arguments) {
+        std::vector<Node> all_nodes;
+        all_nodes.push_back(callable_expression);
+        all_nodes.insert(all_nodes.end(), call_arguments.begin(), call_arguments.end());
+        return Node{Kind::Call, "", all_nodes};
+    }
+
+    static Node tuple(const std::vector<Node>& tuple_items) {
+        return Node{Kind::Tuple, "", tuple_items};
     }
 };
 
 class Parser {
 private:
     Lexer lexer_;
-    DiagnosticList diagnostics_ = {};
-    vector<Rule> rules_;
+    Token current_ = Token(TokenKind::EndOfFile, 0, "");
+    bool had_spacing_before_current_ = false;
 
-    vector<Token> tokens_;
-    vector<vector<Earley>> chart_;
-    std::unordered_map<std::string, std::shared_ptr<SyntaxNode>> memo_;
-
-    void print_item_(const Earley& item) {
-        cout << "[" << item.rule().lhs() << " -> ";
-        int dot = item.dot();
-        const vector<Symbol>& rhs = item.rule().rhs();
-        for (int i = 0; i < (int)rhs.size(); i++) {
-            if (i == dot) cout << "• ";
-            const Symbol& s = rhs[i];
-            cout << "{T=" << s.is_terminal() << ":";
-            if (s.is_terminal()) {
-                cout << "TERM";
-            } else {
-                cout << s.nonterminal();
-            }
-            cout << "} ";
-        }
-        if (dot == (int)rhs.size()) cout << "•";
-        cout << ", origin=" << item.origin() << "]";
+    bool is_spacing_token_(TokenKind kind) const {
+        return kind == TokenKind::WhiteSpace || kind == TokenKind::NewLine;
     }
 
-    void print_chart_at_position_(int position) {
-        cout << "  Chart[" << position << "]:" << endl;
-        for (int i = 0; i < (int)chart_.at(position).size(); i++) {
-            cout << "    ";
-            print_item_(chart_.at(position).at(i));
-            cout << endl;
+    void advance_() {
+        bool had_spacing = false;
+
+        while (true) {
+            Token token = lexer_.lex();
+            if (is_spacing_token_(token.kind())) {
+                had_spacing = true;
+                continue;
+            }
+
+            current_ = token;
+            had_spacing_before_current_ = had_spacing;
+            return;
         }
     }
 
-    bool add_to_chart_(int position, const Earley& item) {
-        // Check if item already exists in chart at position
-        for (const auto& existing_item : chart_.at(position)) {
-            if (existing_item == item) {
-                return false; // Item already exists
+    std::string token_name_(TokenKind kind) const {
+        switch (kind) {
+            case TokenKind::Identifier: return "Identifier";
+            case TokenKind::DoubleQuote: return "\"";
+            case TokenKind::Quote: return "'";
+            case TokenKind::LeftRoundBracket: return "(";
+            case TokenKind::RightRoundBracket: return ")";
+            case TokenKind::Comma: return ",";
+            case TokenKind::EndOfFile: return "EndOfFile";
+            default: return "Token";
+        }
+    }
+
+    [[noreturn]] void throw_unexpected_(TokenKind expected) const {
+        std::ostringstream message;
+        message << "Expected " << token_name_(expected) << ", found '" << current_.text() << "'";
+        throw std::runtime_error(message.str());
+    }
+
+    void expect_(TokenKind kind) {
+        if (current_.kind() != kind) {
+            throw_unexpected_(kind);
+        }
+    }
+
+    std::vector<Node> parse_comma_separated_expressions_() {
+        std::vector<Node> items;
+
+        if (current_.kind() == TokenKind::RightRoundBracket) {
+            return items;
+        }
+
+        while (true) {
+            items.push_back(parse_expression_());
+
+            if (current_.kind() != TokenKind::Comma) {
+                break;
+            }
+
+            advance_();
+
+            if (!had_spacing_before_current_) {
+                throw std::runtime_error("Whitespace/newline is required after ','");
             }
         }
-        // Item doesn't exist, so add it
-        chart_.at(position).push_back(item);
-        return true; // Successfully added
+
+        return items;
+    }
+
+    Node parse_tuple_or_group_() {
+        expect_(TokenKind::LeftRoundBracket);
+        advance_();
+
+        std::vector<Node> items = parse_comma_separated_expressions_();
+        expect_(TokenKind::RightRoundBracket);
+        advance_();
+
+        if (items.size() == 1) {
+            return items.at(0);
+        }
+
+        return Node::tuple(items);
+    }
+
+    Node parse_string_literal_() {
+        expect_(TokenKind::DoubleQuote);
+
+        std::string value;
+        while (true) {
+            Token token = lexer_.lex();
+
+            if (token.kind() == TokenKind::EndOfFile) {
+                throw std::runtime_error("Unterminated string literal");
+            }
+
+            if (token.kind() == TokenKind::DoubleQuote) {
+                advance_();
+                return Node::string_literal(value);
+            }
+
+            value.append(token.text());
+        }
+    }
+
+    Node parse_quote_expression_() {
+        expect_(TokenKind::Quote);
+        advance_();
+
+        Node quoted_expression = parse_expression_();
+
+        expect_(TokenKind::Quote);
+        advance_();
+
+        return Node::quote(quoted_expression);
+    }
+
+    Node parse_primary_() {
+        if (current_.kind() == TokenKind::Quote) {
+            return parse_quote_expression_();
+        }
+
+        if (current_.kind() == TokenKind::LeftRoundBracket) {
+            return parse_tuple_or_group_();
+        }
+
+        if (current_.kind() == TokenKind::DoubleQuote) {
+            return parse_string_literal_();
+        }
+
+        expect_(TokenKind::Identifier);
+        std::string identifier_name = current_.text();
+        advance_();
+
+        return Node::identifier(identifier_name);
+    }
+
+    Node parse_expression_() {
+        Node expression = parse_primary_();
+
+        while (current_.kind() == TokenKind::LeftRoundBracket) {
+            if (had_spacing_before_current_) {
+                throw std::runtime_error("Whitespace/newline is not allowed between callable expression and '('");
+            }
+
+            advance_();
+            std::vector<Node> arguments = parse_comma_separated_expressions_();
+            expect_(TokenKind::RightRoundBracket);
+            advance_();
+
+            expression = Node::call(expression, arguments);
+        }
+
+        return expression;
     }
 
 public:
-    Parser(Lexer lexer, vector<Rule> rules) : lexer_(lexer), rules_(rules) {
+    explicit Parser(Lexer lexer) : lexer_(lexer) {
     }
 
-    const vector<vector<Earley>>& chart() const { return chart_; }
-    const vector<Token>& tokens() const { return tokens_; }
+    Node parse() {
+        advance_();
 
-    void tokenize_all() {
-        bool b = false;
-        while (true) {
-            Token t = lexer_.lex();
-            tokens_.push_back(t);
-            if (t.kind() == TokenKind::EndOfFile) break;
-        }
-    }
-
-    void initialize_chart() {
-        vector<Earley> initial_items = {};
-        for (int i = 0; i < rules_.size(); i++) {
-            const Rule rule = rules_.at(i);
-            if (rule.lhs() == "start") {
-                Earley initial_item(rule, 0, 0);
-                initial_items.push_back(initial_item);
-                cout << "  [INIT] Added: ";
-                print_item_(initial_item);
-                cout << endl;
-            }
+        if (current_.kind() == TokenKind::EndOfFile) {
+            return Node::empty();
         }
 
-        chart_.push_back(initial_items);
-        chart_.resize(tokens_.size() + 1);
-    }
+        Node root = parse_expression_();
 
-    void completer(int position, Earley completed_item) {
-        cout << "  [COMPLETER at pos " << position << "] ";
-        print_item_(completed_item);
-        cout << endl;
-        
-        // When a rule is completed, look back at the origin position
-        // Find all items waiting for this completed nonterminal
-        int origin = completed_item.origin();
-        string completed_nonterminal = completed_item.rule().lhs();
-        
-        // Look at all items at the origin position
-        for (int i = 0; i < (int)chart_.at(origin).size(); i++) {
-            const Earley parent_item = chart_.at(origin).at(i);
-            const Rule parent_rule = parent_item.rule();
-            int parent_dot = parent_item.dot();
-            int parent_rhs_size = parent_rule.rhs().size();
-            
-            // Check if this parent item is waiting for a nonterminal at its dot
-            if (parent_dot < parent_rhs_size) {
-                const Symbol symbol_at_dot = parent_rule.rhs().at(parent_dot);
-                
-                // If it's a nonterminal and matches what we just completed
-                if (!symbol_at_dot.is_terminal() && symbol_at_dot.nonterminal() == completed_nonterminal) {
-                    // Advance the parent item and add to current position
-                    Earley advanced_item(parent_rule, parent_dot + 1, parent_item.origin());
-                    if (add_to_chart_(position, advanced_item)) {
-                        cout << "    -> Added: ";
-                        print_item_(advanced_item);
-                        cout << endl;
-                    }
-                }
-            }
-        }
-    }
-
-    void predictor(int position, Earley item) {
-        cout << "  [PREDICTOR at pos " << position << "] ";
-        print_item_(item);
-        cout << endl;
-        
-        // When we need to parse a nonterminal, add all rules for that nonterminal
-        const Rule rule = item.rule();
-        int dot = item.dot();
-        const Symbol symbol_at_dot = rule.rhs().at(dot);
-        
-        // Find all rules where LHS matches this nonterminal
-        int total_rules = rules_.size();
-        for (int i = 0; i < total_rules; i++) {
-            const Rule candidate_rule = rules_.at(i);
-            if (candidate_rule.lhs() == symbol_at_dot.nonterminal()) {
-                // Create new item: [candidate_rule, 0, position]
-                Earley new_item(candidate_rule, 0, position);
-                if (add_to_chart_(position, new_item)) {
-                    cout << "    -> Added: ";
-                    print_item_(new_item);
-                    cout << endl;
-                }
-            }
-        }
-    }
-
-    void scanner(int position, Earley item) {
-        cout << "  [SCANNER at pos " << position << "] ";
-        print_item_(item);
-        cout << endl;
-        
-        // When we see a terminal, consume the next token if it matches
-        // Check if we're not at the end of input
-        if (position >= (int)tokens_.size()) {
-            cout << "    -> At end of input" << endl;
-            return;
-        }
-        
-        const Rule rule = item.rule();
-        int dot = item.dot();
-        const Symbol symbol_at_dot = rule.rhs().at(dot);
-        TokenKind expected_terminal = symbol_at_dot.terminal();
-        
-        // Get current token
-        const Token current_token = tokens_.at(position);
-        TokenKind current_token_kind = current_token.kind();
-        
-        cout << "    Expected token, got: " << current_token.text() << endl;
-        
-        // If it matches, advance the dot
-        if (expected_terminal == current_token_kind) {
-            Earley advanced_item(rule, dot + 1, item.origin());
-            if (add_to_chart_(position + 1, advanced_item)) {
-                cout << "    -> MATCH! Added at pos " << (position + 1) << ": ";
-                print_item_(advanced_item);
-                cout << endl;
-            }
-        } else {
-            cout << "    -> No match" << endl;
-        }
-    }
-
-    bool recognize() {
-        tokenize_all();
-        initialize_chart();
-
-        for (int k = 0; k <= tokens_.size(); k++) {
-            cout << "POSITION " << k << endl;
-            int i = 0;
-            while (i < chart_.at(k).size()) {
-                Earley item = chart_.at(k).at(i);
-                Rule rule = item.rule();
-                int dot = item.dot();
-                int size = rule.rhs().size();
-                
-                if (dot == size) {
-                    completer(k, item);
-                }
-                else if (dot < size) {
-                    const Symbol next_symbol = rule.rhs().at(dot);
-                    if (next_symbol.is_terminal()) {
-                        scanner(k, item);
-                    }
-                    else {
-                        predictor(k, item);
-                    }
-                }
-                i++;
-            }
-            print_chart_at_position_(k);
-            cout << endl;
-        }
-        
-        int final_position = tokens_.size();
-        for (int i = 0; i < (int)chart_.at(final_position).size(); i++) {
-            const Earley item = chart_.at(final_position).at(i);
-            const Rule rule = item.rule();
-            int dot = item.dot();
-            int size = rule.rhs().size();
-            int origin = item.origin();
-            
-            if (dot == size && origin == 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    std::shared_ptr<SyntaxNode> parse() {
-        if (recognize()) {
-            std::cout << "True";
-        }
-        else {
-            std::cout << "False";
+        if (current_.kind() != TokenKind::EndOfFile) {
+            throw std::runtime_error("Unexpected trailing tokens");
         }
 
-        
-
-        return nullptr;
+        return root;
     }
 };
+
+inline std::string parser_to_string(const Node& node) {
+    if (node.kind == Node::Kind::Empty) {
+        return "";
+    }
+
+    if (node.kind == Node::Kind::Identifier) {
+        return node.name;
+    }
+
+    if (node.kind == Node::Kind::StringLiteral) {
+        return "\"" + node.name + "\"";
+    }
+
+    if (node.kind == Node::Kind::Quote) {
+        return "'" + parser_to_string(node.arguments.at(0)) + "'";
+    }
+
+    if (node.kind == Node::Kind::Tuple) {
+        std::ostringstream tuple;
+        tuple << "(";
+        for (int i = 0; i < static_cast<int>(node.arguments.size()); ++i) {
+            if (i > 0) {
+                tuple << ", ";
+            }
+            tuple << parser_to_string(node.arguments.at(i));
+        }
+        tuple << ")";
+        return tuple.str();
+    }
+
+    if (node.arguments.empty()) {
+        return "";
+    }
+
+    std::ostringstream result;
+    result << parser_to_string(node.arguments.at(0)) << "(";
+
+    for (int i = 1; i < static_cast<int>(node.arguments.size()); ++i) {
+        if (i > 1) {
+            result << ", ";
+        }
+        result << parser_to_string(node.arguments.at(i));
+    }
+
+    result << ")";
+    return result.str();
+}
+
+inline std::string parser_ast_to_string(const Node& node, int depth = 0) {
+    const std::string indent(static_cast<size_t>(depth) * 2, ' ');
+
+    if (node.kind == Node::Kind::Empty) {
+        return indent + "Empty";
+    }
+
+    if (node.kind == Node::Kind::Identifier) {
+        return indent + "Identifier(" + node.name + ")";
+    }
+
+    if (node.kind == Node::Kind::StringLiteral) {
+        return indent + "String(" + node.name + ")";
+    }
+
+    if (node.kind == Node::Kind::Quote) {
+        const Node& quoted = node.arguments.at(0);
+        std::ostringstream quote;
+        quote << indent << "Quote";
+        quote << "\n" << parser_ast_to_string(quoted, depth + 1);
+        return quote.str();
+    }
+
+    if (node.kind == Node::Kind::Tuple) {
+        std::ostringstream tuple;
+        tuple << indent << "Tuple";
+        for (const Node& item : node.arguments) {
+            tuple << "\n" << parser_ast_to_string(item, depth + 1);
+        }
+        return tuple.str();
+    }
+
+    std::ostringstream result;
+    if (node.arguments.empty()) {
+        result << indent << "Call";
+        return result.str();
+    }
+
+    result << indent << "Call";
+    result << "\n" << parser_ast_to_string(node.arguments.at(0), depth + 1);
+    result << "\n";
+
+    for (int i = 1; i < static_cast<int>(node.arguments.size()); ++i) {
+        const Node& argument = node.arguments.at(i);
+        result << "\n" << parser_ast_to_string(argument, depth + 1);
+    }
+
+    return result.str();
+}
 
 }

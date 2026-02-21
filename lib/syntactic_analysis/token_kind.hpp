@@ -16,9 +16,6 @@ enum class TokenKind {
     Bar,
     Colon,
 
-    BarArrow,
-    ColonArrow,
-
     LeftRoundBracket,
     RightRoundBracket,
 
@@ -40,9 +37,6 @@ const std::vector<std::pair<std::string, TokenKind>> special_character_to_kind =
     {"|", TokenKind::Bar},
     {":", TokenKind::Colon},
 
-    {"↦", TokenKind::BarArrow},
-    {"⧴", TokenKind::ColonArrow},
-
     {"(", TokenKind::LeftRoundBracket},
     {")", TokenKind::RightRoundBracket},
 
@@ -53,7 +47,7 @@ const std::vector<std::pair<std::string, TokenKind>> special_character_to_kind =
     {"\"", TokenKind::DoubleQuote},
 
     {"□", TokenKind::LeftProofBracket},
-    {"■", TokenKind::RightProofBracket},
+    {"■", TokenKind::RightProofBracket}
 };
 
 const std::vector<std::string> invisible_characters = {

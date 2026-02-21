@@ -69,7 +69,6 @@ public:
             kind = TokenKind::NewLine;
         }
         else if (c == "") {
-            position_++;
             kind = TokenKind::EndOfFile;
         }
         else if (is_special(c)) {
@@ -86,10 +85,9 @@ public:
             kind = TokenKind::Identifier;
         }
 
-        if (kind_to_string(kind).has_value()) {
-            text = kind_to_string(kind).value();
-        }
-        else {
+        if (kind == TokenKind::EndOfFile) {
+            text = "";
+        } else {
             text = source_.to_string(TextSpan(begin, position_ - begin));
         }
 

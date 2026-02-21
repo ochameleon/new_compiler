@@ -20,7 +20,7 @@ public:
     }
 
     // Explicit copy constructor
-    Rule(const Rule& other) : lhs_(other.lhs()), rhs_(other.rhs()), precedence_(other.precedence()) {}
+    Rule(const Rule& other) : lhs_(other.lhs()), rhs_(other.rhs()), precedence_(other.precedence()), associativity_(other.associativity()) {}
     
     // Explicit assignment operator
     Rule& operator=(const Rule& other) {
@@ -39,7 +39,7 @@ public:
     bool associativity() const { return associativity_; }
 
     bool operator==(Rule r) const {
-        return lhs_ == r.lhs() && rhs_ == r.rhs() && precedence_ == r.precedence();
+        return lhs_ == r.lhs() && rhs_ == r.rhs() && precedence_ == r.precedence() && associativity_ == r.associativity();
     }
 };
 
