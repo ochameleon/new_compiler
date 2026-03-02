@@ -5,6 +5,12 @@
 f : f = (x, y) ↦ sin(x) + cos(y) ·
 ...
 
+// or even more contract
+
+f := (x, y) ↦ sin(x) + cos(y) ·
+...
+
+
 f(0, 6)
 // this should symbolically simplify to cos(6)
 // via the steps f(0, 6) = sin(0) + cos(6) = 0 + cos(6) = cos(6)
