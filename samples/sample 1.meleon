@@ -2,7 +2,7 @@
 
 // or equivalently, in infix form
 
-f : f = x ↦ sin(x) ·
+f : f = (x, y) ↦ sin(x) + cos(y) ·
 ...
 
 f(0, 6)
