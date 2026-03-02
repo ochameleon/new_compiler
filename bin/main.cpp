@@ -43,13 +43,13 @@ int main() {
         Node root = parser.parse();
         std::cout << "AST:" << std::endl;
         std::cout << parser_ast_to_string(root) << std::endl;
-        std::cout << "Expression: " << parser_to_string(root) << std::endl;
+        std::cout << "Expressions: " << parser_to_string(root) << std::endl;
 
         Interpreter interpreter(root);
         Node evaluated = interpreter.evaluate();
         std::cout << "Evaluated AST:" << std::endl;
         std::cout << parser_ast_to_string(evaluated) << std::endl;
-        std::cout << "Evaluated Expression: " << parser_to_string(evaluated) << std::endl;
+        std::cout << "Evaluated Expressions: " << parser_to_string(evaluated) << std::endl;
         return 0;
     }
     catch (const std::exception& ex) {

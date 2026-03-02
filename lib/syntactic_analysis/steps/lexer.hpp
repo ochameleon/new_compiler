@@ -8,8 +8,6 @@
 #include "../token.hpp"
 #include "../token_kind.hpp"
 
-using namespace std;
-
 namespace my {
 
 class Lexer {

@@ -12,6 +12,7 @@ namespace my {
 struct Node {
     enum class Kind {
         Empty,
+        Program,
         Identifier,
         StringLiteral,
         Quote,
@@ -25,6 +26,10 @@ struct Node {
 
     static Node empty() {
         return Node{Kind::Empty, "", {}};
+    }
+
+    static Node program(const std::vector<Node>& expressions) {
+        return Node{Kind::Program, "", expressions};
     }
 
     static Node identifier(const std::string& identifier_name) {
@@ -56,6 +61,7 @@ private:
     Lexer lexer_;
     Token current_ = Token(TokenKind::EndOfFile, 0, "");
     bool had_spacing_before_current_ = false;
+    bool had_newline_before_current_ = false;
 
     bool is_spacing_token_(TokenKind kind) const {
         return kind == TokenKind::WhiteSpace || kind == TokenKind::NewLine;
@@ -63,16 +69,21 @@ private:
 
     void advance_() {
         bool had_spacing = false;
+        bool had_newline = false;
 
         while (true) {
             Token token = lexer_.lex();
             if (is_spacing_token_(token.kind())) {
                 had_spacing = true;
+                if (token.kind() == TokenKind::NewLine) {
+                    had_newline = true;
+                }
                 continue;
             }
 
             current_ = token;
             had_spacing_before_current_ = had_spacing;
+            had_newline_before_current_ = had_newline;
             return;
         }
     }
@@ -223,19 +234,39 @@ public:
             return Node::empty();
         }
 
-        Node root = parse_expression_();
+        std::vector<Node> expressions;
+        expressions.push_back(parse_expression_());
 
-        if (current_.kind() != TokenKind::EndOfFile) {
-            throw std::runtime_error("Unexpected trailing tokens");
+        while (current_.kind() != TokenKind::EndOfFile) {
+            if (!had_newline_before_current_) {
+                throw std::runtime_error("Unexpected trailing tokens: expressions must be on distinct lines");
+            }
+
+            expressions.push_back(parse_expression_());
         }
 
-        return root;
+        if (expressions.size() == 1) {
+            return expressions.at(0);
+        }
+
+        return Node::program(expressions);
     }
 };
 
 inline std::string parser_to_string(const Node& node) {
     if (node.kind == Node::Kind::Empty) {
         return "";
+    }
+
+    if (node.kind == Node::Kind::Program) {
+        std::ostringstream program;
+        for (int i = 0; i < static_cast<int>(node.arguments.size()); ++i) {
+            if (i > 0) {
+                program << "\n";
+            }
+            program << parser_to_string(node.arguments.at(i));
+        }
+        return program.str();
     }
 
     if (node.kind == Node::Kind::Identifier) {
@@ -286,6 +317,15 @@ inline std::string parser_ast_to_string(const Node& node, int depth = 0) {
 
     if (node.kind == Node::Kind::Empty) {
         return indent + "Empty";
+    }
+
+    if (node.kind == Node::Kind::Program) {
+        std::ostringstream program;
+        program << indent << "Program";
+        for (const Node& expression : node.arguments) {
+            program << "\n" << parser_ast_to_string(expression, depth + 1);
+        }
+        return program.str();
     }
 
     if (node.kind == Node::Kind::Identifier) {

@@ -31,6 +31,7 @@ private:
     static std::string kind_name_(Node::Kind kind) {
         switch (kind) {
             case Node::Kind::Empty: return "Empty";
+            case Node::Kind::Program: return "Program";
             case Node::Kind::Identifier: return "Identifier";
             case Node::Kind::StringLiteral: return "StringLiteral";
             case Node::Kind::Quote: return "Quote";
@@ -113,6 +114,21 @@ private:
             return node;
         }
 
+        if (is_lambda_literal_(node)) {
+            const Node& head = node.arguments.at(0);
+            const Node& parameters = node.arguments.at(1);
+            const Node& body = node.arguments.at(2);
+
+            std::unordered_map<std::string, Node> inner_environment = environment;
+            std::vector<std::string> shadowed_names = collect_parameter_names_(parameters);
+            for (const std::string& name : shadowed_names) {
+                inner_environment.erase(name);
+            }
+
+            Node rewritten_body = substitute_(body, inner_environment);
+            return Node::call(head, {parameters, rewritten_body});
+        }
+
         if (node.arguments.empty()) {
             return node;
         }
@@ -127,6 +143,15 @@ private:
     }
 
     Node evaluate_(const Node& node) const {
+
+        if (node.kind == Node::Kind::Program) {
+            std::vector<Node> evaluated_expressions;
+            evaluated_expressions.reserve(node.arguments.size());
+            for (const Node& expression : node.arguments) {
+                evaluated_expressions.push_back(evaluate_(expression));
+            }
+            return Node::program(evaluated_expressions);
+        }
 
         if (is_lambda_literal_(node)) {
             return node;

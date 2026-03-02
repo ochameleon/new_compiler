@@ -13,9 +13,6 @@ enum class TokenKind {
     NewLine,
     EndOfFile,
 
-    Bar,
-    Colon,
-
     LeftRoundBracket,
     RightRoundBracket,
 
@@ -34,9 +31,6 @@ enum class TokenKind {
 };
 
 const std::vector<std::pair<std::string, TokenKind>> special_character_to_kind = {
-    {"|", TokenKind::Bar},
-    {":", TokenKind::Colon},
-
     {"(", TokenKind::LeftRoundBracket},
     {")", TokenKind::RightRoundBracket},
 
