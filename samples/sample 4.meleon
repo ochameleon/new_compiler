@@ -1,0 +1,7 @@
+|❘(
+	T, ∧(topological_space(T), compact(T)),
+	|❘(
+		(U, V), ∧(open(T; U), open(T; V), ⊆(T, ∪(U, V))),
+		...
+	)
+)

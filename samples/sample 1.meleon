@@ -1,4 +1,7 @@
-:·(f, =(f, ↦((x, y), +(sin(x), cos(y)))), ...)
+:·(
+	f,=(f, ↦((x, y), +(sin(x), cos(y)))),
+	...
+)
 
 // or equivalently, in infix form
 
