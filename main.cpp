@@ -2,11 +2,11 @@
 #include <string>
 #include <vector>
 
-#include "../lib/syntactic_analysis/steps/reader.hpp"
-#include "../lib/syntactic_analysis/steps/lexer.hpp"
-#include "../lib/syntactic_analysis/steps/parser.hpp"
-#include "../lib/syntactic_analysis/steps/interpreter.hpp"
-#include "../lib/syntactic_analysis/text/text_source.hpp"
+#include "./lib/text/reader.hpp"
+#include "./lib/lexer/lexer.hpp"
+#include "./lib/parser/parser.hpp"
+#include "./lib/interpreter/interpreter.hpp"
+#include "./lib/text/text_source.hpp"
 
 using namespace my;
 

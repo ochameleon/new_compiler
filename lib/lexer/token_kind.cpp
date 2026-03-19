@@ -6,53 +6,17 @@
 #include <optional>
 #include <algorithm>
 
+#include "token_kind.hpp"
+
+// TODO: populate list
+
 namespace my {
 
-enum class TokenKind {
-    WhiteSpace,
-    NewLine,
-    EndOfFile,
-
-    LeftRoundBracket,
-    RightRoundBracket,
-
-    Comma,
-    SemiColon,
-
-    Quote,
-    DoubleQuote,
-
-    LeftProofBracket,
-    RightProofBracket,
-
-    Identifier,
-    BadLexeme,
-    CompilationUnit,
-};
-
-const std::vector<std::pair<std::string, TokenKind>> special_character_to_kind = {
-    {"(", TokenKind::LeftRoundBracket},
-    {")", TokenKind::RightRoundBracket},
-
-    {",", TokenKind::Comma},
-    {";", TokenKind::SemiColon},
-
-    {"'", TokenKind::Quote},
-    {"\"", TokenKind::DoubleQuote},
-
+std::unordered_map<std::string, TokenKind> SpecialCharactersMap = {
     {"□", TokenKind::LeftProofBracket},
     {"■", TokenKind::RightProofBracket}
 };
 
-const std::vector<std::string> invisible_characters = {
-    u8"\u000B", u8"\u000C", u8"\u00A0", u8"\u1680", u8"\u180E",
-    u8"\u2000", u8"\u2001", u8"\u2002", u8"\u2003", u8"\u2004",
-    u8"\u2005", u8"\u2006", u8"\u2007", u8"\u2008", u8"\u2009",
-    u8"\u200A", u8"\u200B", u8"\u200C", u8"\u200D", u8"\u200E",
-    u8"\u200F", u8"\u2028", u8"\u2029", u8"\u202F", u8"\u205F",
-    u8"\u2060", u8"\u2061", u8"\u2062", u8"\u2063", u8"\u2064",
-    u8"\uFEFF"
-};
 
 bool is_special(const std::string& c) {
     return any_of(
@@ -68,6 +32,11 @@ bool is_invisible(const std::string& c) {
 
 bool is_spacing(const std::string& c) {
     return c == " " || c == "\t";
+}
+
+bool is_digit(const std::string &c) {
+  return c.size() == 1 && c[0] >= '0' && c[0] <='9';
+  
 }
 
 bool is_newline(const std::string& c) {
@@ -86,8 +55,6 @@ std::vector<std::pair<V, K>> invert(const std::vector<std::pair<K, V>>& input) {
     return result;
 }
 
-const std::vector<std::pair<TokenKind, std::string>> kind_to_special_characters =
-    invert(special_character_to_kind);
 
 bool is_special_kind(TokenKind kind) {
     return any_of(
@@ -116,4 +83,4 @@ std::optional<std::string> kind_to_string(TokenKind kind) {
     }
 }
 
-}
+};

@@ -4,13 +4,41 @@
 #include <string>
 
 #include "../text/text_source.hpp"
-#include "../../diagnostics/diagnostic_list.hpp"
-#include "../token.hpp"
-#include "../token_kind.hpp"
+#include "token.hpp"
+#include "token_kind.hpp"
 
 namespace my {
 
 class Lexer {
+  TextSource TextSrc;
+  int position = 0;
+  public:
+    explicit Lexer (const TextSource &TextSrc_) : TextSrc(TextSrc_) {}
+    // TODO: check move constructor.
+    Token lex();
+
+  private:
+    Token makeToken(TokenKind Kind, int start);
+    string moveForward();    
+    inline bool textEnded() const;
+
+    string peek(int offset = 0);
+    
+    bool compareAndMove(const string &expected);
+    // TODO: check whitespaces
+    void skipWhitespace();
+    Token makeIdentifier(int start);
+
+    Token makeNumber(int start);
+
+    Token makeString(int start);
+    inline bool isAlpha(string c) const;   
+
+}; 
+
+
+/*
+class Lexer1 {
 private:
     TextSource source_;
     int position_ = 0;
@@ -92,5 +120,7 @@ public:
         return Token(kind, position_, text);
     }
 };
+
+*/
 
 }

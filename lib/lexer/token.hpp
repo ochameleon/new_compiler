@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "syntax_node.hpp"
+#include "../syntax/syntax_node.hpp"
 #include "token_kind.hpp"
-#include "text/text_span.hpp"
+#include "../text/text_span.hpp"
 
 namespace my {
 
